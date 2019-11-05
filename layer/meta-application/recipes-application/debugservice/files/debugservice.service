@@ -1,9 +1,0 @@
-[Unit]
-Description=DebugService daemon
-
-[Service]
-ExecStart=/usr/bin/debugservice
-ExecStop=/usr/bin/killall -s KILL debugservice
-
-[Install]
-WantedBy=basic.target
