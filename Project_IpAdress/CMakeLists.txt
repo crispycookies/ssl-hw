@@ -1,2 +1,2 @@
-add_executable(IpAdress main.cpp IpAddress.cpp)
+add_executable(IpAdress main.c)
 
