@@ -28,7 +28,6 @@ typedef struct
 {
 	std::string topic;
 	std::string sensorVal;
-	std::string timestamp;
 	
 } PublishData_t;
 

@@ -36,7 +36,7 @@ std::string Sensor::readDeviceDriver()
 	std::stringstream strStream;
 	
 	driverFile.open(mDriverPath);
-	if (!driverFile) 
+	if (!driverFile.good()) 
 	{
 		throw std::string{ "Sensor:readDeviceDriver: opening driver file failed: " + mDriverPath };
 	}

@@ -7,8 +7,8 @@
 
 #include "MQTTPublisher.h"
 #include "MQTTPackager.h"
-
-const std::string payload2 = "hello";
+#include <iomanip>
+const size_t IOSTREAM_SENSOR_TOPIC_SPLITTER = 30;
 
 MQTTPublisher::MQTTPublisher(std::string const & serverAddress)
 {
@@ -52,6 +52,7 @@ void MQTTPublisher::publish(QoS_t const & qos) const
 	
 	for (auto & sensor : mSensors)
 	{
+		std::cout << "Sensor: " << sensor->getName() << std::endl;
 		// perform measurement
 		sensor->measure();
 		PublishDataVec_t package = sensor->accept(mqttPackager);
@@ -59,13 +60,16 @@ void MQTTPublisher::publish(QoS_t const & qos) const
 		for(size_t i = 0 ; i < package.size() ; i++)
 		{			
 			mqtt::topic topic(*mClient, package[i].topic, qos);
+			
+			std::cout << std::setw(IOSTREAM_SENSOR_TOPIC_SPLITTER) << std::left 
+				<< ("Sensor value " + std::to_string(i) + ": " + package[i].sensorVal) 
+				<< "--> Topic: " << package[i].topic << std::endl;
+			
 			// publish sensor value
 			mqtt::token_ptr token = topic.publish(package[i].sensorVal.c_str(), package[i].sensorVal.size());
-			token->wait();  		
-			// publish timestamp 
-			token = topic.publish(package[i].timestamp.c_str(), package[i].timestamp.size());
-			token->wait();  	
+			token->wait();  			
 		}
+		std::cout << "-------------------------------------------------------------------------" << std::endl;
 	}
 }
 

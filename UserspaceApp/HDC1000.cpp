@@ -25,7 +25,7 @@ void HDC1000::measure()
 {
 	std::random_device dev;
 	std::mt19937 rng(dev());
-	std::uniform_int_distribution<std::mt19937::result_type> dist6(1, 100);  
+	std::uniform_int_distribution<std::mt19937::result_type> dist6(18.0, 25.0);  
 
 	mTemperature = dist6(rng);
 	mHumidity = dist6(rng);

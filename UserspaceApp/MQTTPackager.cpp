@@ -12,9 +12,8 @@ PublishDataVec_t MQTTPackager::visitSensor(std::shared_ptr<HDC1000> const & sens
 	PublishDataVec_t package;
 	auto temperature = std::to_string(sensor->getTemperature());
 	auto humidity = std::to_string(sensor->getHumidity());
-	// TODO: Get time stamp ...
 	
-	package.push_back({ MQTT_HDC1000_TEMPERATURE_TOPIC, temperature, "123456789" });
-	package.push_back({ MQTT_HDC1000_HUMIDITY_TOPIC, humidity, "123456789" });
+	package.push_back({ MQTT_HDC1000_TEMPERATURE_TOPIC, temperature});
+	package.push_back({ MQTT_HDC1000_HUMIDITY_TOPIC, humidity});
 	return package;
 }

@@ -8,9 +8,9 @@
 #ifndef MQTTPUBLISHER_H
 #define MQTTPUBLISHER_H
 
-#include "HDC1000.h"
 #include <vector>
 #include <memory>
+#include "Sensor.h"
 #include "SensorSettings.h"
 #include "mqtt/async_client.h"
 
