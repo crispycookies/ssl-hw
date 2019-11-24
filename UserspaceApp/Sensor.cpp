@@ -47,3 +47,5 @@ std::string Sensor::readDeviceDriver()
 	driverFile.close();
 	return content;
 }
+
+

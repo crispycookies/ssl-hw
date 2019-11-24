@@ -36,7 +36,7 @@ typedef std::vector <PublishData_t> PublishDataVec_t;
 ///////////////////////////////
 // SENSOR: HDC1000
 ///////////////////////////////
-const std::string HDC1000_DRIVER_PATH = "/dev/hdc1000";
+const std::string HDC1000_DRIVER_PATH = "/dev/hcsensor";
 const std::string MQTT_HDC1000_NAME = "HDC1000";
 const std::string MQTT_HDC1000_TEMPERATURE_TOPIC = "SSL/HDC1000/Temperature";
 const std::string MQTT_HDC1000_HUMIDITY_TOPIC = "SSL/HDC1000/Humidity";  

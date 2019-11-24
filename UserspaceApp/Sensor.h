@@ -23,10 +23,12 @@ public:
 	virtual void measure() = 0;
 	std::string getName();
 	std::string getDriverPath();
+protected:
+	std::string readDeviceDriver();
 private:
 	std::string mName = "";
 	std::string mDriverPath = "";
-	std::string readDeviceDriver();
+
 }
 ;
 

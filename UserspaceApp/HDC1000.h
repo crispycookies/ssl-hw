@@ -19,10 +19,10 @@ public:
 	virtual PublishDataVec_t accept(std::shared_ptr<Visitor> const & visitor) override;
 	virtual void measure() override;	
 	double getTemperature() const;
-	int getHumidity() const;
+	double getHumidity() const;
 private:
 	double mTemperature = 0.0;  
-	int  mHumidity = 0;   
+	double  mHumidity = 0.0;   
 };
 
 #endif
