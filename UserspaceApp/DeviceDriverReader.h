@@ -1,0 +1,14 @@
+/////////////////////////////////////////////////////////////
+// Author: Patrick Wuerflinger
+// Filename: DeviceDriverReader.h
+// Description: Header file for the device reader class
+// Revision: 0
+/////////////////////////////////////////////////////////////
+
+class DeviceDriverReader
+{
+public:
+	
+private:
+	
+};

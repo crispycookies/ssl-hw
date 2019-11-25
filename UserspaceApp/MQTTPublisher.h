@@ -11,7 +11,7 @@
 #include <vector>
 #include <memory>
 #include "Sensor.h"
-#include "SensorSettings.h"
+#include "Settings.h"
 #include "mqtt/async_client.h"
 
 class MQTTPublisher

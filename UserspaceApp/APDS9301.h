@@ -18,9 +18,9 @@ public:
 	
 	virtual PublishDataVec_t accept(std::shared_ptr<Visitor> const & visitor) override;
 	virtual void measure() override;	
-	size_t getBrightness() const;
+	double getBrightness() const;
 private:
-	size_t mBrightness = 0;    
+	double mBrightness = 0.0;    
 }
 ;
 

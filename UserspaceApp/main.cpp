@@ -10,11 +10,12 @@
 #include <chrono>
 #include <mutex>
 #include <libfpgaregion.h>
-#include "SensorSettings.h"
+#include "Settings.h"
 #include "MQTTPublisher.h"
 #include "HDC1000.h"
 #include "APDS9301.h"
 #include "MPU9250.h"
+#include "SevenSegDisplay.h"
 
 using namespace std::chrono_literals;
 
@@ -54,13 +55,19 @@ int main()
 		
 		// create board sensors
 		auto hdc1000 = std::make_shared<HDC1000>(MQTT_HDC1000_NAME, HDC1000_DRIVER_PATH);
-		auto apds9301 = std::make_shared<APDS9301>(MQTT_APDS9301_NAME, APDS9301_DRIVER_PATH);
-		auto mpu9250 = std::make_shared<MPU9250>(MQTT_MPU9250_NAME, MPU9250_DRIVER_PATH);
+		//auto apds9301 = std::make_shared<APDS9301>(MQTT_APDS9301_NAME, APDS9301_DRIVER_PATH);
+		//auto mpu9250 = std::make_shared<MPU9250>(MQTT_MPU9250_NAME, MPU9250_DRIVER_PATH);
+		
+		// create actuators
+		auto sevensegDisplay = std::make_shared<SevenSegDisplay>(MQTT_SEVENSEGDIPLAY_NAME, SEVENSEGDISPLAY_DRIVER_PATH);	
+		sevensegDisplay->enable();
+		sevensegDisplay->setBrightness(0x7F);
+		sevensegDisplay->setDigits({ 1, 2, 3, 4, 5, 6});
 		
 		// add all the board sensors to the publisher
 		publisher.addSensor(hdc1000);
-		publisher.addSensor(apds9301);
-		publisher.addSensor(mpu9250);
+		//publisher.addSensor(apds9301);
+		//publisher.addSensor(mpu9250);
 		
 		// first init to use FPGA ressources
 		fpga.Acquire();

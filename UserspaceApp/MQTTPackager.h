@@ -11,7 +11,6 @@
 #include "Visitor.h"
 #include "HDC1000.h"
 #include "APDS9301.h"
-#include <iostream>
 
 class MQTTPackager : public Visitor
 {

@@ -1,12 +1,12 @@
 /////////////////////////////////////////////////////////////
 // Author: Patrick Wuerflinger
-// Filename: SensorSettings.h
+// Filename: Settings.h
 // Description: Header file for the sensor settings
 // Revision: 0
 /////////////////////////////////////////////////////////////
 
-#ifndef SENSORSETTINGS_H
-#define SENSORSETTINGS_H
+#ifndef SETTINGS_H
+#define SETTINGS_H
 
 #include <string>
 #include <vector>
@@ -31,7 +31,7 @@ typedef struct
 	
 } PublishData_t;
 
-typedef std::vector <PublishData_t> PublishDataVec_t;
+typedef std::vector <PublishData_t> PublishDataVec_t; 
 
 ///////////////////////////////
 // SENSOR: HDC1000
@@ -57,5 +57,10 @@ const std::string MQTT_MPU9250_GYROSCOPE_TOPIC = "SSL/MPU9250/Gyroscope";
 const std::string MQTT_MPU9250_ACCELEROMETER_TOPIC = "SSL/MPU9250/Accelerometer";
 const std::string MQTT_MPU9250_MAGNETOMETER_TOPIC = "SSL/MPU9250/Magnetometer";
 
+///////////////////////////////
+// ACTUATOR: SEVENSEG
+///////////////////////////////
+const std::string SEVENSEGDISPLAY_DRIVER_PATH = "/dev/sevensegmentdisplay";
+const std::string MQTT_SEVENSEGDIPLAY_NAME = "SevenSegDisplay";
 
 #endif

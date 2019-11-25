@@ -60,7 +60,7 @@ error:
 	$(error Invalid configuration, please check your inputs)
 endif
 
-SOURCEFILES := APDS9301.cpp HDC1000.cpp main.cpp MQTTPackager.cpp MQTTPublisher.cpp Sensor.cpp
+SOURCEFILES := Actuator.cpp APDS9301.cpp HDC1000.cpp main.cpp MPU9250.cpp MQTTPackager.cpp MQTTPublisher.cpp Sensor.cpp
 EXTERNAL_LIBS := 
 EXTERNAL_LIBS_COPIED := $(foreach lib, $(EXTERNAL_LIBS),$(BINARYDIR)/$(notdir $(lib)))
 

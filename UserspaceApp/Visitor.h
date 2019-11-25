@@ -9,7 +9,7 @@
 #define VISITOR_H
 
 #include <memory>
-#include "SensorSettings.h"
+#include "Settings.h"
 class HDC1000;
 class APDS9301;
 class MPU9250;

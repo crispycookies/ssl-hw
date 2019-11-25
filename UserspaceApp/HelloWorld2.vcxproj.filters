@@ -59,15 +59,18 @@
     <ClCompile Include="MPU9250.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="Actuator.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="SevenSegDisplay.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Sensor.h">
       <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="HDC1000.h">
-      <Filter>Header files</Filter>
-    </ClInclude>
-    <ClInclude Include="SensorSettings.h">
       <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="Visitor.h">
@@ -83,6 +86,15 @@
       <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="MPU9250.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="Settings.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="Actuator.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="SevenSegDisplay.h">
       <Filter>Header files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -71,19 +71,22 @@
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Actuator.h" />
     <ClInclude Include="APDS9301.h" />
     <ClInclude Include="HDC1000.h" />
     <ClInclude Include="MPU9250.h" />
     <ClInclude Include="MQTTPackager.h" />
-    <ClInclude Include="SensorSettings.h" />
+    <ClInclude Include="Settings.h" />
     <ClInclude Include="MQTTPublisher.h" />
     <ClInclude Include="Sensor.h" />
+    <ClInclude Include="SevenSegDisplay.h" />
     <ClInclude Include="Visitor.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
+    <ClCompile Include="Actuator.cpp" />
     <ClCompile Include="APDS9301.cpp" />
     <ClCompile Include="HDC1000.cpp" />
     <ClCompile Include="main.cpp" />
@@ -91,6 +94,7 @@
     <ClCompile Include="MQTTPackager.cpp" />
     <ClCompile Include="MQTTPublisher.cpp" />
     <ClCompile Include="Sensor.cpp" />
+    <ClCompile Include="SevenSegDisplay.cpp" />
     <None Include="Makefile" />
     <None Include="debug.mak" />
     <None Include="release.mak" />

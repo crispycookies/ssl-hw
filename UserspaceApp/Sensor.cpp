@@ -20,17 +20,17 @@ Sensor::Sensor(std::string const & name, std::string const & driverPath)
 	mDriverPath = driverPath;
 }
 
-std::string Sensor::getName()
+std::string Sensor::getName() const
 {
 	return mName;
 }
 
-std::string Sensor::getDriverPath()
+std::string Sensor::getDriverPath() const
 {
 	return mDriverPath;
 }
 
-std::string Sensor::readDeviceDriver()
+std::string Sensor::readDeviceDriver() const
 {
 	std::ifstream driverFile;
 	std::stringstream strStream;

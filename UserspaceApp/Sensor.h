@@ -10,7 +10,7 @@
 
 #include <memory>
 #include <string>
-#include "SensorSettings.h"
+#include "Settings.h"
 
 class Visitor;
 
@@ -21,10 +21,10 @@ public:
 	virtual ~Sensor() = default;
 	virtual PublishDataVec_t accept(std::shared_ptr<Visitor> const & visitor) = 0;
 	virtual void measure() = 0;
-	std::string getName();
-	std::string getDriverPath();
+	std::string getName() const;
+	std::string getDriverPath() const;
 protected:
-	std::string readDeviceDriver();
+	std::string readDeviceDriver() const;
 private:
 	std::string mName = "";
 	std::string mDriverPath = "";
