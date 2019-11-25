@@ -5,7 +5,7 @@
 
 #VisualGDB: AutoSourceFiles		#<--- remove this line to disable auto-updating of SOURCEFILES and EXTERNAL_LIBS
 
-TARGETNAME := HelloWorld2
+TARGETNAME := UserspaceApp
 #TARGETTYPE can be APP, STATIC or SHARED
 TARGETTYPE := APP
 
@@ -60,7 +60,7 @@ error:
 	$(error Invalid configuration, please check your inputs)
 endif
 
-SOURCEFILES := HDC1000.cpp main.cpp SensorBoard.cpp Sensor.cpp
+SOURCEFILES := APDS9301.cpp HDC1000.cpp main.cpp MQTTPackager.cpp MQTTPublisher.cpp Sensor.cpp
 EXTERNAL_LIBS := 
 EXTERNAL_LIBS_COPIED := $(foreach lib, $(EXTERNAL_LIBS),$(BINARYDIR)/$(notdir $(lib)))
 

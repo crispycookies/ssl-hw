@@ -44,8 +44,18 @@ const std::string MQTT_HDC1000_HUMIDITY_TOPIC = "SSL/HDC1000/Humidity";
 ///////////////////////////////
 // SENSOR: APDS9301
 ///////////////////////////////
+const std::string APDS9301_DRIVER_PATH = "/dev/apdssensor";
 const std::string MQTT_APDS9301_NAME = "APDS9301";
 const std::string MQTT_APDS9301_BRIGHTNESS_TOPIC = "SSL/APDS9301/Brightness";
+
+///////////////////////////////
+// SENSOR: MPU9250
+///////////////////////////////
+const std::string MPU9250_DRIVER_PATH = "/dev/mpu9250";
+const std::string MQTT_MPU9250_NAME = "MPU9250";
+const std::string MQTT_MPU9250_GYROSCOPE_TOPIC = "SSL/MPU9250/Gyroscope";
+const std::string MQTT_MPU9250_ACCELEROMETER_TOPIC = "SSL/MPU9250/Accelerometer";
+const std::string MQTT_MPU9250_MAGNETOMETER_TOPIC = "SSL/MPU9250/Magnetometer";
 
 
 #endif

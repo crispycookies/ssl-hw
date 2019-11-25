@@ -10,12 +10,15 @@
 
 #include "Visitor.h"
 #include "HDC1000.h"
+#include "APDS9301.h"
 #include <iostream>
 
 class MQTTPackager : public Visitor
 {
 public:
 	virtual PublishDataVec_t visitSensor(std::shared_ptr<HDC1000> const & sensor) override;
+	virtual PublishDataVec_t visitSensor(std::shared_ptr<APDS9301> const & sensor) override;
+	virtual PublishDataVec_t visitSensor(std::shared_ptr<MPU9250> const & sensor) override;
 };
 
 #endif

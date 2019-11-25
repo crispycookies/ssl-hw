@@ -71,7 +71,9 @@
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="APDS9301.h" />
     <ClInclude Include="HDC1000.h" />
+    <ClInclude Include="MPU9250.h" />
     <ClInclude Include="MQTTPackager.h" />
     <ClInclude Include="SensorSettings.h" />
     <ClInclude Include="MQTTPublisher.h" />
@@ -82,8 +84,10 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ItemGroup>
+    <ClCompile Include="APDS9301.cpp" />
     <ClCompile Include="HDC1000.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MPU9250.cpp" />
     <ClCompile Include="MQTTPackager.cpp" />
     <ClCompile Include="MQTTPublisher.cpp" />
     <ClCompile Include="Sensor.cpp" />

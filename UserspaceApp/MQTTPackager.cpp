@@ -17,3 +17,20 @@ PublishDataVec_t MQTTPackager::visitSensor(std::shared_ptr<HDC1000> const & sens
 	package.push_back({ MQTT_HDC1000_HUMIDITY_TOPIC, humidity});
 	return package;
 }
+
+
+PublishDataVec_t MQTTPackager::visitSensor(std::shared_ptr<APDS9301> const & sensor)
+{
+	PublishDataVec_t package;
+	auto brightness = std::to_string(sensor->getBrightness());
+	
+	package.push_back({ MQTT_APDS9301_BRIGHTNESS_TOPIC, brightness });
+	return package;
+}
+
+
+PublishDataVec_t MQTTPackager::visitSensor(std::shared_ptr<MPU9250> const & sensor)
+{
+	PublishDataVec_t package;
+	return package;
+}

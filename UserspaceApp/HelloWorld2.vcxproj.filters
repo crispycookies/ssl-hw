@@ -53,6 +53,12 @@
     <ClCompile Include="MQTTPublisher.cpp">
       <Filter>Source files</Filter>
     </ClCompile>
+    <ClCompile Include="APDS9301.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="MPU9250.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Sensor.h">
@@ -71,6 +77,12 @@
       <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="MQTTPublisher.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="APDS9301.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="MPU9250.h">
       <Filter>Header files</Filter>
     </ClInclude>
   </ItemGroup>
