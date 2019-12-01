@@ -32,7 +32,7 @@ std::string Actuator::getDriverPath() const
 
 void Actuator::writeDeviceDriver(std::string const & str) const
 {
-	std::ofstream driverFile(mDriverPath);
+	std::ofstream driverFile;
 	driverFile.open(mDriverPath);
 	
 	if (!driverFile.good()) 

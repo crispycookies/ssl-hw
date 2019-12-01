@@ -10,6 +10,7 @@
 const uint8_t PORT_ENABLE = 0xFF;
 const uint8_t PORT_DISABLE = 0x00;
 const uint8_t MAX_BRIGHTNESS = 0x7F;
+const uint8_t DUMMY_BYTE = 0x88;
 
 void SevenSegDisplay::enable()
 {
@@ -45,12 +46,11 @@ void SevenSegDisplay::setDigits(DigitsVec_t const & digits)
 
 std::string SevenSegDisplay::createConfigStr()
 {
-	std::string str = std::to_string(mEnable);
+	std::string str = std::to_string(DUMMY_BYTE) + std::to_string(mEnable);
 	for (auto & digit : mDigits)
 	{
 		str += std::to_string(digit);
 	}
 	str += std::to_string(mBrightness);
-	
 	return str;
 }

@@ -12,6 +12,7 @@
 #include <array>
 
 /*
+1 Byte : Dummy
 1 Byte : 0xFF EIN 0x00 AUS
 6 Byte : Zahlen
 1 Byte : 0x00 AUS 0x7F MAXIMUM

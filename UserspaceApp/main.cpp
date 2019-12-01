@@ -9,15 +9,15 @@
 #include <thread>
 #include <chrono>
 #include <mutex>
+#include <string>
 #include <libfpgaregion.h>
 #include "Settings.h"
 #include "MQTTPublisher.h"
+#include "ConcurrentQueue.h"
 #include "HDC1000.h"
 #include "APDS9301.h"
 #include "MPU9250.h"
 #include "SevenSegDisplay.h"
-
-using namespace std::chrono_literals;
 
 // Callback functions for the FPGA region
 void ReconfigRequest();
@@ -50,43 +50,31 @@ int main()
 {
 	try
 	{
-		// initialize necassery variables
-		MQTTPublisher publisher(MQTT_SERVER_ADDRESS);
+		// create shared queue for multithreading
+		auto queue = std::make_shared<ConcurrentQueue<PublishData_t>>();
 		
-		// create board sensors
-		auto hdc1000 = std::make_shared<HDC1000>(MQTT_HDC1000_NAME, HDC1000_DRIVER_PATH);
-		//auto apds9301 = std::make_shared<APDS9301>(MQTT_APDS9301_NAME, APDS9301_DRIVER_PATH);
-		//auto mpu9250 = std::make_shared<MPU9250>(MQTT_MPU9250_NAME, MPU9250_DRIVER_PATH);
+		// create sensor objects
+		auto publisher = std::make_shared<MQTTPublisher>(MQTT_SERVER_ADDRESS, THREAD_PUBLISHER_PAUSE_TIME, queue);
+		auto hdc1000 = std::make_shared<HDC1000>(MQTT_HDC1000_NAME, HDC1000_DRIVER_PATH, THREAD_HDC1000_PAUSE_TIME, queue);
+		//auto apds9301 = std::make_shared<APDS9301>(MQTT_APDS9301_NAME, APDS9301_DRIVER_PATH, THREAD_APDS9301_PAUSE_TIME, queue);
+		//auto mpu9250 = std::make_shared<MPU9250>(MQTT_MPU9250_NAME, MPU9250_DRIVER_PATH, THREAD_MPU9250_PAUSE_TIME, queue);
+		
+		// create threads
+		std::thread tPublish(&MQTTPublisher::start, publisher);
+		std::thread tHDC1000(&HDC1000::start, hdc1000);
+		//std::thread tAPDS9301(&APDS9301::start, apds9301);
+		//std::thread tMPU9250(&MPU9250::start, mpu9250);
 		
 		// create actuators
 		auto sevensegDisplay = std::make_shared<SevenSegDisplay>(MQTT_SEVENSEGDIPLAY_NAME, SEVENSEGDISPLAY_DRIVER_PATH);	
 		sevensegDisplay->enable();
 		sevensegDisplay->setBrightness(0x7F);
 		sevensegDisplay->setDigits({ 1, 2, 3, 4, 5, 6});
-		
-		// add all the board sensors to the publisher
-		publisher.addSensor(hdc1000);
-		//publisher.addSensor(apds9301);
-		//publisher.addSensor(mpu9250);
-		
-		// first init to use FPGA ressources
-		fpga.Acquire();
-		// super loop 
-		while (true)
-		{
-			// lock FPGA ressources 
-			fpgaMutex.lock();
-			// connect to server
-			publisher.connect();
-			// perform measurements and publish via MQTT message broker
-			publisher.publish(QoS_AT_LEAST_ONCE);
-			// disconnect from server
-			publisher.disconnect();
-			// unlock FPGA ressources for potential reconfiguration
-			fpgaMutex.unlock();	
-			// block thread for 500 ms
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-		}
+	
+		tPublish.join();
+		tHDC1000.join();
+		//tAPDS9301.join();
+		//tMPU9250.join();
 	}
 	catch(std::string const & error)
 	{

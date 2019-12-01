@@ -24,29 +24,31 @@ typedef enum
 	QoS_EXACTLY_ONCE = 2
 } QoS_t;
 
-typedef struct
-{
-	std::string topic;
-	std::string sensorVal;
-	
-} PublishData_t;
 
-typedef std::vector <PublishData_t> PublishDataVec_t; 
+typedef std::pair<std::string, std::string> PublishData_t; 
+typedef std::vector<PublishData_t> PublishDataVec_t;
+
+///////////////////////////////
+// THREADS
+///////////////////////////////
+const size_t THREAD_PUBLISHER_PAUSE_TIME = 50;
+const size_t THREAD_HDC1000_PAUSE_TIME = 250;
+const size_t THREAD_APDS9301_PAUSE_TIME = 500;
+const size_t THREAD_MPU9250_PAUSE_TIME = 500;
 
 ///////////////////////////////
 // SENSOR: HDC1000
 ///////////////////////////////
 const std::string HDC1000_DRIVER_PATH = "/dev/hcsensor";
 const std::string MQTT_HDC1000_NAME = "HDC1000";
-const std::string MQTT_HDC1000_TEMPERATURE_TOPIC = "SSL/HDC1000/Temperature";
-const std::string MQTT_HDC1000_HUMIDITY_TOPIC = "SSL/HDC1000/Humidity";  
+const std::string MQTT_HDC1000_TOPIC = "SSL/HDC1000";
 
 ///////////////////////////////
 // SENSOR: APDS9301
 ///////////////////////////////
 const std::string APDS9301_DRIVER_PATH = "/dev/apdssensor";
 const std::string MQTT_APDS9301_NAME = "APDS9301";
-const std::string MQTT_APDS9301_BRIGHTNESS_TOPIC = "SSL/APDS9301/Brightness";
+const std::string MQTT_APDS9301_TOPIC = "SSL/APDS9301";
 
 ///////////////////////////////
 // SENSOR: MPU9250

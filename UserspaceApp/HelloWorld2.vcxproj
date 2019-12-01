@@ -73,7 +73,9 @@
   <ItemGroup>
     <ClInclude Include="Actuator.h" />
     <ClInclude Include="APDS9301.h" />
+    <ClInclude Include="ConcurrentQueue.h" />
     <ClInclude Include="HDC1000.h" />
+    <ClInclude Include="json.h" />
     <ClInclude Include="MPU9250.h" />
     <ClInclude Include="MQTTPackager.h" />
     <ClInclude Include="Settings.h" />

@@ -13,8 +13,8 @@
 class MPU9250 : public Sensor, public std::enable_shared_from_this<MPU9250>
 {
 public:
-	MPU9250(std::string const & sensorName, std::string const & driverPath)
-		: Sensor(sensorName, driverPath) {}
+	MPU9250(std::string const & sensorName, std::string const & driverPath, size_t const & pauseMs, std::shared_ptr<ConcurrentQueue<PublishData_t>> const & queue)
+		: Sensor(sensorName, driverPath, pauseMs, queue) {}
 	
 	virtual PublishDataVec_t accept(std::shared_ptr<Visitor> const & visitor) override;
 	virtual void measure() override;	

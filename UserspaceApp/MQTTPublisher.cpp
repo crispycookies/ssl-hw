@@ -6,34 +6,20 @@
 /////////////////////////////////////////////////////////////
 
 #include "MQTTPublisher.h"
-#include "MQTTPackager.h"
-#include <iomanip>
-const size_t IOSTREAM_SENSOR_TOPIC_SPLITTER = 30;
 
-MQTTPublisher::MQTTPublisher(std::string const & serverAddress)
+const size_t MAX_ELEMENTS_QUEUE = 100;
+
+MQTTPublisher::MQTTPublisher(std::string const & serverAddress, size_t const & pauseMs, std::shared_ptr<ConcurrentQueue<PublishData_t>> const & queue)
 {
-	if (serverAddress.empty())
+	if (serverAddress.empty() || queue == nullptr)
 	{
-		throw std::string{ "Publisher:CTOR: invalid server address! " };
+		throw std::string{ "MQTTPublisher:MQTTPublisher: nullpointer argument passed or empty server address! " };
 	}
-	
-	mServerAddress = serverAddress;	
-	mClient = std::make_shared<mqtt::async_client>(mServerAddress, "");
+	mServerAddress = serverAddress;
+	mQueue = queue;
+	mPauseMs = pauseMs;
+	mClient = std::make_shared <mqtt::async_client>(mServerAddress, "");
 }
-
-
-void MQTTPublisher::addSensor(std::shared_ptr<Sensor> const & sensor)
-{
-	if (sensor != nullptr)
-	{
-		mSensors.push_back(sensor);
-	}
-	else
-	{
-		throw std::string{ "Publisher:addSensor: nullpointer argument passed! " };
-	}
-}
-
 
 void MQTTPublisher::connect() const
 {
@@ -46,30 +32,23 @@ void MQTTPublisher::disconnect() const
 	mClient->disconnect()->wait();
 }
 
-void MQTTPublisher::publish(QoS_t const & qos) const
+void MQTTPublisher::start() const
 {
-	auto mqttPackager = std::make_shared<MQTTPackager>();
-	
-	for (auto & sensor : mSensors)
+	while (true)
 	{
-		std::cout << "Sensor: " << sensor->getName() << std::endl;
-		// perform measurement
-		sensor->measure();
-		PublishDataVec_t package = sensor->accept(mqttPackager);
-
-		for(size_t i = 0 ; i < package.size() ; i++)
-		{			
-			mqtt::topic topic(*mClient, package[i].topic, qos);
-			
-			std::cout << std::setw(IOSTREAM_SENSOR_TOPIC_SPLITTER) << std::left 
-				<< ("Sensor value " + std::to_string(i) + ": " + package[i].sensorVal) 
-				<< "--> Topic: " << package[i].topic << std::endl;
-			
-			// publish sensor value
-			mqtt::token_ptr token = topic.publish(package[i].sensorVal.c_str(), package[i].sensorVal.size());
-			token->wait();  			
+		if (mQueue->size() > MAX_ELEMENTS_QUEUE)
+		{
+			connect();
+			size_t counter = MAX_ELEMENTS_QUEUE;
+			while (counter != 0)
+			{
+				auto package = mQueue->pop();		
+				mqtt::token_ptr token = mClient->publish(package.first, package.second.c_str(), package.second.size(), QoS_AT_LEAST_ONCE, true);
+				token->wait();  
+				counter--;
+			}
+			disconnect();
 		}
-		std::cout << "-------------------------------------------------------------------------" << std::endl;
+		std::this_thread::sleep_for(std::chrono::milliseconds(mPauseMs));
 	}
 }
-

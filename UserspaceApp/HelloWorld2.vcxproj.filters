@@ -97,5 +97,11 @@
     <ClInclude Include="SevenSegDisplay.h">
       <Filter>Header files</Filter>
     </ClInclude>
+    <ClInclude Include="ConcurrentQueue.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="json.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

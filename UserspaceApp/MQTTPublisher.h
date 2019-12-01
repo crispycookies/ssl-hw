@@ -9,23 +9,25 @@
 #define MQTTPUBLISHER_H
 
 #include <vector>
+#include <string>
 #include <memory>
 #include "Sensor.h"
 #include "Settings.h"
+#include "ConcurrentQueue.h"
 #include "mqtt/async_client.h"
 
 class MQTTPublisher
 {
 public:
-	MQTTPublisher(std::string const & serverAddress);
+	MQTTPublisher(std::string const & serverAddress, size_t const & pauseMs, std::shared_ptr<ConcurrentQueue<PublishData_t>> const & queue);	
+	void start() const;
+private:
 	void connect() const;
 	void disconnect() const;	
-	void addSensor(std::shared_ptr<Sensor> const & sensor);	
-	void publish(QoS_t const & qos = QoS_AT_LEAST_ONCE) const;
-private:
+	size_t mPauseMs;
 	std::string mServerAddress = "";
 	std::shared_ptr<mqtt::async_client> mClient = nullptr;
-	std::vector<std::shared_ptr<Sensor>> mSensors;	
+	std::shared_ptr<ConcurrentQueue<PublishData_t>> mQueue = nullptr;
 }
 ;
 
