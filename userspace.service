@@ -1,0 +1,7 @@
+[Unit]
+Description = Userspace daemon
+[Service]
+ExecStart =/usr/bin/UserspaceApp
+ExecStop =/usr/bin/killall -s KILL UserspaceApp
+[Install]
+WantedBy = basic.target
