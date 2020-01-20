@@ -27,3 +27,5 @@ END_GROUP := -Wl,--end-group
 USE_DEL_TO_CLEAN := 1
 CP_NOT_AVAILABLE := 1
 IS_LINUX_PROJECT := 1
+
+clean:
