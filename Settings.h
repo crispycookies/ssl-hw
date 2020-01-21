@@ -35,7 +35,7 @@ typedef std::vector<PublishData_t> PublishDataVec_t;
 const size_t THREAD_PUBLISHER_PAUSE_TIME = 20;
 const size_t THREAD_HDC1000_PAUSE_TIME = 1000;
 const size_t THREAD_APDS9301_PAUSE_TIME = 250;
-const size_t THREAD_MPU9250_PAUSE_TIME = 50;
+const size_t THREAD_MPU9250_PAUSE_TIME = 500;
 
 ///////////////////////////////
 // SENSOR: HDC1000

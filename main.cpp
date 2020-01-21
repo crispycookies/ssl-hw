@@ -87,7 +87,7 @@ int main()
 		sevenseg->setDigits({ 0, 1, 2, 3, 4, 5 });
 		sevenseg->setBrightness(MAX_BRIGHTNESS);
 				
-		mpu9250->setThresholdValues({ -20.0, -20.0, -20.0 }, { 7.0, 25.0, 25.0 });
+		mpu9250->setThresholdValues({ -20.0, -20.0, -20.0 }, { 17.0, 25.0, 25.0 });
 		mpu9250->setStreamingMode(true);
 			
 		// start sensor threads
