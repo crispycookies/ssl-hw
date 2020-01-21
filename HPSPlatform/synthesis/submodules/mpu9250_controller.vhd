@@ -1,0 +1,726 @@
+--------------------------------------------------------------------------------
+--
+--   FileName:         hdc1000_controller.vhd
+--   Dependencies:     none
+--
+--------------------------------------------------------------------------------
+
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.numeric_std.ALL;
+
+ENTITY mpu9250_controller IS
+  PORT(
+    clk       	: IN    STD_LOGIC; 	--system clock
+    reset_n   	: IN    STD_LOGIC; 	--active low reset
+	
+    miso      	: IN 	STD_LOGIC;
+    mosi      	: INOUT STD_LOGIC;
+    sclk      	: INOUT STD_LOGIC;
+	ss_n	  	: INOUT	STD_LOGIC;
+	
+	addr 		: IN 	STD_LOGIC_VECTOR(3 downto 0);
+	read_enable : IN 	STD_LOGIC;
+	read_data 	: OUT 	STD_LOGIC_VECTOR(31 downto 0);
+	write_enable: IN 	STD_LOGIC;
+	write_data 	: IN 	STD_LOGIC_VECTOR(31 downto 0);
+	
+	dRam_addr 		: IN 	STD_LOGIC_VECTOR(11 downto 0);
+	dRam_read_en 	: IN 	STD_LOGIC;
+	dRam_read_data 	: OUT 	STD_LOGIC_VECTOR(31 downto 0);
+	
+	irq	: OUT STD_LOGIC
+    );                   			
+END mpu9250_controller;
+
+ARCHITECTURE logic OF mpu9250_controller IS
+
+	constant counter_max : INTEGER := 50000;
+	signal counter : INTEGER;
+	
+	constant event_counter_max : INTEGER := 50000;
+	signal event_counter : INTEGER;
+	
+	constant event_counter_otherRef_max : INTEGER := 100000000;
+	signal event_counter_otherRef : INTEGER;
+	
+	constant startUp_counter_max : INTEGER := 5000000;
+	constant waitForMeasure_counter_max : INTEGER := 50000;
+	constant read_counter_max : INTEGER := 1000;
+	
+	signal wait_counter : INTEGER;
+	
+	signal busy_prev : STD_ULOGIC;
+	
+	signal enable 	: STD_ULOGIC;
+	signal cont 	: STD_ULOGIC;
+	signal tx_data  : STD_ULOGIC_VECTOR(7 DOWNTO 0);
+	signal busy		: STD_ULOGIC;  
+	signal rx_data  : STD_ULOGIC_VECTOR(7 DOWNTO 0);
+	
+	signal accel_x : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	signal accel_y : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	signal accel_z : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	
+	signal gyro_x : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	signal gyro_y : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	signal gyro_z : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	
+	signal mag_x : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	signal mag_y : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	signal mag_z : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	
+	type t_Memory is array (0 to 8) of STD_ULOGIC_VECTOR(31 downto 0);
+	signal memory : t_Memory;
+	
+	-- state machine
+	TYPE machine IS(startUp, pause, configure, waitForMeasureBegin, checkState, measureAcc, measureGyro, measureMag, saveRes, waitNextMeasure, waitForMeasureGyro, waitForMeasureMag, 
+		eventMode);
+    SIGNAL state : machine;
+	
+	TYPE event_machine IS(getValue, saveX, saveY, saveZ, compareValue, waitNextValue, waitForRead, waitForMeasureGyro, measureGyro, waitForMeasureMag, measureMag, saveRes);
+    SIGNAL event_state : event_machine;
+	
+	SIGNAL parameter          : INTEGER RANGE 0 TO 12;                   
+	SIGNAL parameter_addr     : STD_ULOGIC_VECTOR(7 DOWNTO 0);          
+	SIGNAL parameter_data     : STD_ULOGIC_VECTOR(7 DOWNTO 0);      
+
+	-- regs to write from firmware
+	SIGNAL config_reg : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	
+	SIGNAL accel_x_top 	  : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	SIGNAL accel_x_bottom : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	SIGNAL accel_y_top 	  : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	SIGNAL accel_y_bottom : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	SIGNAL accel_z_top 	  : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	SIGNAL accel_z_bottom : STD_ULOGIC_VECTOR(31 DOWNTO 0);
+	
+	SIGNAL dRAM_addr0 : STD_ULOGIC_VECTOR(11 downto 0);
+	SIGNAL dRAM_wr0	  : STD_ULOGIC;
+	SIGNAL dRAM_data0 : STD_ULOGIC_VECTOR(31 downto 0);
+	
+	signal readVal_counter : INTEGER;
+	signal readVal_counter_active : STD_ULOGIC;
+	
+	signal read_bit_before : STD_ULOGIC;
+
+BEGIN
+
+	-- -------------------------------------------
+	-- inst of the spi master
+	-- -------------------------------------------
+	SPIMaster : entity work.spi_master(logic)
+		generic map (
+			slaves => 1,
+			d_width => 8
+		)
+		port map (
+			clock   => clk,
+			reset_n => reset_n,
+			enable  => enable, 
+			cpol    => '1',
+			cpha    => '1',
+			cont    => cont,
+			clk_div => 25,
+			addr    => 0,
+			tx_data => STD_LOGIC_VECTOR(tx_data),
+			miso    => miso,
+			sclk    => sclk, 
+			ss_n(0) => ss_n, 
+			mosi    => mosi,
+			busy    => busy,
+			STD_ULOGIC_VECTOR(rx_data) => rx_data
+		); 
+
+	DRAM : entity work.dual_ported_ram(Behavioral)
+		port map (
+			clk        => clk,       
+			wr_en_0    => dRAM_wr0,
+			wr_en_1    => '0',         
+			rd_en_0    => '0',
+			rd_en_1    => dRam_read_en,        
+			data_in_0  => STD_LOGIC_VECTOR(dRAM_data0),
+			data_in_1  => (others => '0'),         
+			addr_in_0  => STD_LOGIC_VECTOR(dRAM_addr0),
+			addr_in_1  => dRam_addr,         
+			data_out_0 => open,
+			data_out_1 => dRam_read_data
+		); 
+
+	
+	-- -------------------------------------------
+	-- process to handle sensor communication
+	-- -------------------------------------------
+	PROCESS(clk, reset_n)
+		variable count : integer := 0;
+	BEGIN
+		IF(reset_n = '0') THEN                --reset asserted
+			count := 0;
+			counter <= 0;
+			wait_counter <= 0;
+			
+			event_counter <= 0;
+			
+			event_counter_otherRef <= 0;
+			
+			busy_prev <= '0';
+			
+			enable 	<= '0';
+			cont 	<= '0';
+			tx_data <= (others => '0');
+			
+			accel_x <= (others => '0');
+			accel_y <= (others => '0');
+			accel_z <= (others => '0');
+			
+			gyro_x <= (others => '0');
+			gyro_y <= (others => '0');
+			gyro_z <= (others => '0');
+			
+			mag_x <= (others => '0');
+			mag_y <= (others => '0');
+			mag_z <= (others => '0');
+			
+			memory <= (others => (others => '0'));
+
+			state <= startUp;
+			
+			event_state <= getValue;
+			
+			parameter <= 0;
+			parameter_addr <= (others => '0');
+			parameter_data <= (others => '0');
+			
+			dRAM_addr0 <= x"BFF";
+			dRAM_wr0 <= '0';
+			dRAM_data0 <= (others => '0');
+			
+			readVal_counter <= 0;
+			readVal_counter_active <= '0';
+			
+			read_bit_before <= '0';
+			
+			irq <= '0';
+        
+		ELSIF(clk'EVENT AND clk = '1') THEN
+			  
+			counter <= counter + 1;
+			
+			dRAM_wr0 <= '0';
+			
+			case state is
+			
+				when startUp =>
+					counter <= 0;
+					wait_counter <= wait_counter + 1;
+					if(busy = '0' and wait_counter >= startUp_counter_max) then
+						state <= pause;
+						wait_counter <= 0;
+					end if;
+					
+				when pause =>
+					counter <= 0;
+					IF(busy = '0') THEN               
+						IF(count < 5000000) THEN            
+							count := count + 1;                   
+							state <= pause;                        
+						ELSE                                 
+							count := 0;                         
+						CASE parameter IS                      
+							WHEN 0 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"6A";          
+								parameter_data <= x"20"; 
+								state <= configure;           
+							WHEN 1 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"24";          
+								parameter_data <= x"0D"; 
+								state <= configure;          
+							WHEN 2 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"25";          
+								parameter_data <= x"0C"; 
+								state <= configure;   
+							WHEN 3 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"26";          
+								parameter_data <= x"0B"; 
+								state <= configure;
+							WHEN 4 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"63";          
+								parameter_data <= x"01"; 
+								state <= configure;
+							WHEN 5 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"27";          
+								parameter_data <= x"81"; 
+								state <= configure;
+							WHEN 6 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"26";          
+								parameter_data <= x"0A"; 
+								state <= configure;
+							WHEN 7 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"63";          
+								parameter_data <= x"12"; 
+								state <= configure;
+							WHEN 8 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"27";          
+								parameter_data <= x"81"; 
+								state <= configure;	
+							WHEN 9 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"25";          
+								parameter_data <= x"8C"; 
+								state <= configure;
+							WHEN 10 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"26";          
+								parameter_data <= x"03"; 
+								state <= configure;
+							WHEN 11 =>                             
+								parameter <= parameter + 1;            
+								parameter_addr <= x"27";          
+								parameter_data <= x"87"; 
+								state <= configure;
+							WHEN 12 =>                     
+								state <= waitForMeasureBegin;          
+							WHEN OTHERS => NULL;
+						END CASE;        
+						END IF;
+					END IF;
+					
+				when configure => 
+					counter <= 0;
+					busy_prev <= busy;                     
+					IF(busy_prev = '1' AND busy = '0') THEN 
+						count := count + 1;                            
+					END IF;
+					CASE count IS                                  
+						WHEN 0 =>                                     
+							IF(busy = '0') THEN                         
+								cont <= '1';                               
+								enable <= '1';                          
+								tx_data <= parameter_addr;         
+							ELSE                                           
+								tx_data <= parameter_data;        
+							END IF;
+						WHEN 1 =>                                       
+							cont <= '0';                                
+							enable <= '0';                              
+							count := 0;                                 
+							state <= pause;                             
+						WHEN OTHERS => NULL;
+					END CASE;
+						
+				when waitForMeasureBegin =>
+					counter <= 0;
+					wait_counter <= wait_counter + 1;
+					if(busy = '0' and wait_counter >= waitForMeasure_counter_max) then
+						state <= measureAcc;
+						wait_counter <= 0;
+					end if;
+					
+				when checkState => 
+					if(config_reg(0) = '1') then
+						state <= eventMode;
+					else
+						state <= measureAcc;
+					end if;
+				
+				when measureAcc =>
+					busy_prev <= busy;                        
+					IF(busy_prev = '1' AND busy = '0') THEN   
+						count := count + 1;                           
+					END IF; 
+					
+					CASE count IS                                     
+						WHEN 0 =>                                                           
+							cont <= '1';                          
+							enable <= '1';                           
+							tx_data <= x"C9";--x"BB";                                          			  
+						WHEN 2 =>                                     
+							accel_x(15 downto 8) <= rx_data;
+						WHEN 3 =>                                         
+							accel_x(7 downto 0) <= rx_data;   
+						WHEN 4 =>                                         
+							accel_y(15 downto 8) <= rx_data;    
+						WHEN 5 =>                                         
+							accel_y(7 downto 0) <= rx_data;
+						WHEN 6 =>      
+							accel_z(15 downto 8) <= rx_data; 
+							enable <= '0'; 
+							cont <= '0';							
+						WHEN 7 =>                                         
+							accel_z(7 downto 0) <= rx_data;   
+							count := 0;  
+							state <= waitForMeasureGyro;
+						WHEN OTHERS => NULL;
+					END CASE;
+					
+				when waitForMeasureGyro =>
+					wait_counter <= wait_counter + 1;
+					if(busy = '0' and wait_counter >= read_counter_max) then
+						state <= measureGyro;
+						wait_counter <= 0;
+					end if;
+					
+				when measureGyro =>
+					busy_prev <= busy;                        
+					IF(busy_prev = '1' AND busy = '0') THEN   
+						count := count + 1;                           
+					END IF; 
+					
+					CASE count IS                                     
+						WHEN 0 =>                                                           
+							cont <= '1';                          
+							enable <= '1';                           
+							tx_data <= x"C3";                                              			  
+						WHEN 2 =>                                     
+							gyro_x(15 downto 8) <= rx_data;
+						WHEN 3 =>                                         
+							gyro_x(7 downto 0) <= rx_data;   
+						WHEN 4 =>                                         
+							gyro_y(15 downto 8) <= rx_data;    
+						WHEN 5 =>                                         
+							gyro_y(7 downto 0) <= rx_data;
+						WHEN 6 =>      
+							gyro_z(15 downto 8) <= rx_data; 
+							enable <= '0'; 
+							cont <= '0';							
+						WHEN 7 =>                                         
+							gyro_z(7 downto 0) <= rx_data;   
+							count := 0;  
+							state <= waitForMeasureMag;
+						WHEN OTHERS => NULL;
+					END CASE;
+					
+				when waitForMeasureMag =>
+					wait_counter <= wait_counter + 1;
+					if(busy = '0' and wait_counter >= read_counter_max) then
+						state <= measureMag;
+						wait_counter <= 0;
+					end if;
+					
+				when measureMag =>
+					busy_prev <= busy;                        
+					IF(busy_prev = '1' AND busy = '0') THEN   
+						count := count + 1;                           
+					END IF; 
+					
+					CASE count IS                                     
+						WHEN 0 =>                                                           
+							cont <= '1';                          
+							enable <= '1';                           
+							tx_data <= x"C9";                                              			  
+						WHEN 2 =>                                     
+							mag_x(15 downto 8) <= rx_data;
+						WHEN 3 =>                                         
+							mag_x(7 downto 0) <= rx_data;   
+						WHEN 4 =>                                         
+							mag_y(15 downto 8) <= rx_data;    
+						WHEN 5 =>                                         
+							mag_y(7 downto 0) <= rx_data;
+						WHEN 6 =>      
+							mag_z(15 downto 8) <= rx_data; 
+							enable <= '0'; 
+							cont <= '0';							
+						WHEN 7 =>                                         
+							mag_z(7 downto 0) <= rx_data;   
+							count := 0;  
+							state <= saveRes;
+						WHEN OTHERS => NULL;
+					END CASE;
+					
+				when saveRes => 
+					memory(0) <= accel_x;
+					memory(1) <= accel_y;
+					memory(2) <= accel_z;
+					
+					memory(3) <= gyro_x;
+					memory(4) <= gyro_y;
+					memory(5) <= gyro_z;
+					
+					memory(6) <= mag_x;
+					memory(7) <= mag_y;
+					memory(8) <= mag_z;
+					state <= waitNextMeasure;
+					
+				when waitNextMeasure =>
+					if(counter >= counter_max) then
+						counter <= 0;
+						state <= checkState;
+					end if;
+					
+				when eventMode => 
+				
+					event_counter <= event_counter + 1;
+					event_counter_otherRef <= event_counter_otherRef + 1;
+					
+					case event_state is
+					
+						when getValue =>
+							busy_prev <= busy;                        
+							IF(busy_prev = '1' AND busy = '0') THEN   
+								count := count + 1;                           
+							END IF; 
+							
+							CASE count IS                                     
+								WHEN 0 =>                                                           
+									cont <= '1';                          
+									enable <= '1';                           
+									tx_data <= x"C9";--x"BB";                                          			  
+								WHEN 2 =>                                     
+									accel_x(15 downto 8) <= rx_data;
+								WHEN 3 =>                                         
+									accel_x(7 downto 0) <= rx_data;   
+								WHEN 4 =>                                         
+									accel_y(15 downto 8) <= rx_data;    
+								WHEN 5 =>                                         
+									accel_y(7 downto 0) <= rx_data;
+								WHEN 6 =>      
+									accel_z(15 downto 8) <= rx_data; 
+									enable <= '0'; 
+									cont <= '0';							
+								WHEN 7 =>                                         
+									accel_z(7 downto 0) <= rx_data;   
+									count := 0;  
+									event_state <= saveX;
+								WHEN OTHERS => NULL;
+							END CASE;
+							
+						when saveX =>
+							dRAM_wr0 <= '1';
+							dRAM_data0 <= accel_x;
+							--dRAM_data0 <= x"11111111";
+							if(to_integer(unsigned(dRAM_addr0)) = 3071) then 
+								dRAM_addr0 <= (others => '0');
+							else
+								dRAM_addr0 <= STD_ULOGIC_VECTOR(unsigned(dRAM_addr0) + 1);
+							end if;
+							event_state <= saveY;
+							
+						when saveY => 
+							dRAM_wr0 <= '1';
+							dRAM_data0 <= accel_y;
+							--dRAM_data0 <= x"22222222";
+							if(to_integer(unsigned(dRAM_addr0)) = 3071) then 
+								dRAM_addr0 <= (others => '0');
+							else
+								dRAM_addr0 <= STD_ULOGIC_VECTOR(unsigned(dRAM_addr0) + 1);
+							end if;
+							event_state <= saveZ;
+							
+						when saveZ =>
+							dRAM_wr0 <= '1';
+							dRAM_data0 <= accel_z;
+							--dRAM_data0 <= x"33333333";
+							if(to_integer(unsigned(dRAM_addr0)) = 3071) then 
+								dRAM_addr0 <= (others => '0');
+							else
+								dRAM_addr0 <= STD_ULOGIC_VECTOR(unsigned(dRAM_addr0) + 1);
+							end if;
+							event_state <= compareValue;
+							
+						when compareValue =>
+							if( (signed(accel_x(15 downto 0)) > signed(accel_x_top(15 downto 0)) or signed(accel_x(15 downto 0)) < signed(accel_x_bottom(15 downto 0))) or
+								(signed(accel_y(15 downto 0)) > signed(accel_y_top(15 downto 0)) or signed(accel_y(15 downto 0)) < signed(accel_y_bottom(15 downto 0))) or
+								(signed(accel_z(15 downto 0)) > signed(accel_z_top(15 downto 0)) or signed(accel_z(15 downto 0)) < signed(accel_z_bottom(15 downto 0)))) then
+								readVal_counter_active <= '1';
+							end if;
+								
+							if(readVal_counter_active = '1') then
+								readVal_counter <= readVal_counter + 1;
+							else
+								readVal_counter <= 0;
+							end if;
+							
+							if(event_counter_otherRef >= event_counter_otherRef_max) then
+								event_counter_otherRef <= 0;
+								event_state <= waitForMeasureGyro;
+							elsif(readVal_counter >= 767) then
+								event_state <= waitForRead;
+								readVal_counter <= 0;
+								readVal_counter_active <= '0';
+								read_bit_before <= config_reg(1);
+								irq <= '1';
+							else
+								event_state <= waitNextValue;
+							end if;
+							
+						when waitNextValue =>
+							if(event_counter >= event_counter_max) then
+								event_counter <= 0;
+								event_state <= getValue;
+							end if;
+						
+						when waitForRead =>
+							if(config_reg(1) /= read_bit_before) then
+								event_state <= getValue;
+								state <= checkState;
+								irq <= '0';
+							end if;
+							
+						when waitForMeasureGyro =>
+							wait_counter <= wait_counter + 1;
+							if(busy = '0' and wait_counter >= read_counter_max) then
+								event_state <= measureGyro;
+								wait_counter <= 0;
+							end if;
+					
+						when measureGyro =>
+							busy_prev <= busy;                        
+							IF(busy_prev = '1' AND busy = '0') THEN   
+								count := count + 1;                           
+							END IF; 
+							
+							CASE count IS                                     
+								WHEN 0 =>                                                           
+									cont <= '1';                          
+									enable <= '1';                           
+									tx_data <= x"C3";                                              			  
+								WHEN 2 =>                                     
+									gyro_x(15 downto 8) <= rx_data;
+								WHEN 3 =>                                         
+									gyro_x(7 downto 0) <= rx_data;   
+								WHEN 4 =>                                         
+									gyro_y(15 downto 8) <= rx_data;    
+								WHEN 5 =>                                         
+									gyro_y(7 downto 0) <= rx_data;
+								WHEN 6 =>      
+									gyro_z(15 downto 8) <= rx_data; 
+									enable <= '0'; 
+									cont <= '0';							
+								WHEN 7 =>                                         
+									gyro_z(7 downto 0) <= rx_data;   
+									count := 0;  
+									event_state <= waitForMeasureMag;
+								WHEN OTHERS => NULL;
+							END CASE;
+					
+						when waitForMeasureMag =>
+							wait_counter <= wait_counter + 1;
+							if(busy = '0' and wait_counter >= read_counter_max) then
+								event_state <= measureMag;
+								wait_counter <= 0;
+							end if;
+							
+						when measureMag =>
+							busy_prev <= busy;                        
+							IF(busy_prev = '1' AND busy = '0') THEN   
+								count := count + 1;                           
+							END IF; 
+							
+							CASE count IS                                     
+								WHEN 0 =>                                                           
+									cont <= '1';                          
+									enable <= '1';                           
+									tx_data <= x"C9";                                              			  
+								WHEN 2 =>                                     
+									mag_x(15 downto 8) <= rx_data;
+								WHEN 3 =>                                         
+									mag_x(7 downto 0) <= rx_data;   
+								WHEN 4 =>                                         
+									mag_y(15 downto 8) <= rx_data;    
+								WHEN 5 =>                                         
+									mag_y(7 downto 0) <= rx_data;
+								WHEN 6 =>      
+									mag_z(15 downto 8) <= rx_data; 
+									enable <= '0'; 
+									cont <= '0';							
+								WHEN 7 =>                                         
+									mag_z(7 downto 0) <= rx_data;   
+									count := 0;  
+									event_state <= saveRes;
+								WHEN OTHERS => NULL;
+							END CASE;
+							
+						when saveRes => 
+							memory(0) <= accel_x;
+							memory(1) <= accel_y;
+							memory(2) <= accel_z;
+							
+							memory(3) <= gyro_x;
+							memory(4) <= gyro_y;
+							memory(5) <= gyro_z;
+							
+							memory(6) <= mag_x;
+							memory(7) <= mag_y;
+							memory(8) <= mag_z;
+							event_state <= waitNextValue;
+									
+						when others => NULL;
+					end case;
+							
+				when others => NULL;
+			end case;
+			
+			accel_x(31 downto 16) <= (others => '0');
+			accel_y(31 downto 16) <= (others => '0');
+			accel_z(31 downto 16) <= (others => '0');
+			
+			gyro_x(31 downto 16) <= (others => '0');
+			gyro_y(31 downto 16) <= (others => '0');
+			gyro_z(31 downto 16) <= (others => '0');
+			
+			mag_x(31 downto 16) <= (others => '0');
+			mag_y(31 downto 16) <= (others => '0');
+			mag_z(31 downto 16) <= (others => '0');
+			
+		END IF;
+	END PROCESS;
+	
+	-- -------------------------------------------
+	-- process to handle data read
+	-- -------------------------------------------
+	PROCESS(clk, reset_n)
+	BEGIN
+		IF(reset_n = '0') THEN
+			config_reg 		<= (others => '0');
+			accel_x_top 	<= (others => '0');
+			accel_x_bottom 	<= (others => '0');
+			accel_y_top 	<= (others => '0');
+			accel_y_bottom 	<= (others => '0');
+			accel_z_top 	<= (others => '0');
+			accel_z_bottom 	<= (others => '0');
+			read_data <= (others => '0');
+	
+		ELSIF(clk'EVENT AND clk = '1') THEN
+		
+			if(read_enable = '1') then
+				case(to_integer(unsigned(addr))) is
+					WHEN 9 	=> read_data <= STD_LOGIC_VECTOR(config_reg);
+					WHEN 10 => read_data <= STD_LOGIC_VECTOR(accel_x_top);
+					WHEN 11 => read_data <= STD_LOGIC_VECTOR(accel_x_bottom);
+					WHEN 12 => read_data <= STD_LOGIC_VECTOR(accel_y_top);
+					WHEN 13 => read_data <= STD_LOGIC_VECTOR(accel_y_bottom);
+					WHEN 14 => read_data <= STD_LOGIC_VECTOR(accel_z_top);
+					WHEN 15 => read_data <= STD_LOGIC_VECTOR(accel_z_bottom);
+					WHEN OTHERS => read_data <= STD_LOGIC_VECTOR(memory(to_integer(unsigned(addr))));
+				end case;
+			else  
+				read_data <= (others => '0');
+			end if;
+			
+			if(write_enable = '1') then
+				case(to_integer(unsigned(addr))) is
+					WHEN 9 	=> config_reg 	<= STD_ULOGIC_VECTOR(write_data);
+					WHEN 10 => accel_x_top 	<= STD_ULOGIC_VECTOR(write_data);
+					WHEN 11 => accel_x_bottom <= STD_ULOGIC_VECTOR(write_data);
+					WHEN 12 => accel_y_top 	<= STD_ULOGIC_VECTOR(write_data);
+					WHEN 13 => accel_y_bottom <= STD_ULOGIC_VECTOR(write_data);
+					WHEN 14 => accel_z_top 	<= STD_ULOGIC_VECTOR(write_data);
+					WHEN 15 => accel_z_bottom <= STD_ULOGIC_VECTOR(write_data);
+					WHEN OTHERS => NULL;
+				end case;
+			end if;
+			
+		END IF;
+		
+	END PROCESS;
+	
+END logic;
